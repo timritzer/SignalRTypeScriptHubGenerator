@@ -61,7 +61,7 @@ namespace SignalRTypeScriptHubGenerator
 			builder.AddImport("{ HubConnection }", "@microsoft/signalr");
 			builder.AddImport($"{{ {options.HubConnectionProviderType} }}", options.HubConnectionProviderModule);
 
-			builder.Substitute(typeof(DateTime), new RtSimpleTypeName("Date"));
+			builder.Substitute(typeof(DateTime), new RtSimpleTypeName("string"));
 			builder.Substitute(typeof(Uri), new RtSimpleTypeName("string"));
 
 			HashSet<Type> relatedTypes = new HashSet<Type>();

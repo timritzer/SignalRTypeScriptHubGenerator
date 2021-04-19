@@ -61,7 +61,6 @@ namespace SignalRTypeScriptHubGenerator
 			builder.AddImport("{ HubConnection }", "@microsoft/signalr");
 			builder.AddImport($"{{ {options.HubConnectionProviderType} }}", options.HubConnectionProviderModule);
 
-			builder.Substitute(typeof(DateTime), new RtSimpleTypeName("string"));
 			builder.Substitute(typeof(Uri), new RtSimpleTypeName("string"));
 
 			HashSet<Type> relatedTypes = new HashSet<Type>();
@@ -77,10 +76,10 @@ namespace SignalRTypeScriptHubGenerator
 			Func<Type, int> orderFunc = relatedTypes.SelectMany(t => EnumerateHierarchy(t, e => e.BaseType).Reverse()).ToList().IndexOf;
 
 			builder.ExportAsEnums(relatedEnumTypes, c => c.Order(orderFunc(c.Type)));
-			builder.ExportAsInterfaces(relatedClassTypes, c => c.WithPublicProperties().WithPublicFields().WithPublicMethods().Order(orderFunc(c.Type)));
-			builder.ExportAsInterfaces(otherTypes, c => c.WithPublicProperties().WithPublicFields().WithPublicMethods().Order(orderFunc(c.Type)));
-			builder.ExportAsInterface<THub>().WithPublicProperties().WithPublicFields().WithPublicMethods().WithCodeGenerator<ServerClientAppender>();
-			builder.ExportAsInterface<TClient>().WithPublicProperties().WithPublicFields().WithPublicMethods().WithCodeGenerator<FrontEndClientAppender>();
+			builder.ExportAsInterfaces(relatedClassTypes, c => c.Substitute(typeof(DateTime), new RtSimpleTypeName("string")).WithPublicProperties().WithPublicFields().WithPublicMethods().Order(orderFunc(c.Type)));
+			builder.ExportAsInterfaces(otherTypes, c => c.Substitute(typeof(DateTime), new RtSimpleTypeName("string")).WithPublicProperties().WithPublicFields().WithPublicMethods().Order(orderFunc(c.Type)));
+			builder.ExportAsInterface<THub>().Substitute(typeof(DateTime), new RtSimpleTypeName("Date")).WithPublicProperties().WithPublicFields().WithPublicMethods().WithCodeGenerator<ServerClientAppender>(); //OK to use dates in this direction
+			builder.ExportAsInterface<TClient>().Substitute(typeof(DateTime), new RtSimpleTypeName("string")).WithPublicProperties().WithPublicFields().WithPublicMethods().WithCodeGenerator<FrontEndClientAppender>();
 		}
 
 		private class SignalRConfiguration { public string HubPath { get; set; } }

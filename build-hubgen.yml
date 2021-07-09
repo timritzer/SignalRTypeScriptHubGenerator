@@ -87,7 +87,7 @@ steps:
   condition: and(succeeded(), ${{ parameters.publish }}, eq(variables['allowPublishing'], 'true'))
   inputs:
     command: 'pack'
-    packagesToPack: '**/*.csproj;!**/*.Tests.csproj'
+    packagesToPack: '**/*.csproj;!**/*.Tests.csproj;!Samples/**'
     includesymbols: true
     includesource: true
     versioningScheme: '$(versioningScheme)'

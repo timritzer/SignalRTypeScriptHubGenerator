@@ -1,0 +1,104 @@
+#Use consistent Build Number to use with Nuget versioning
+name: $(BuildDefinitionName)_$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
+
+#Auto build on master
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+#Whether or not to publish the resulting package  
+parameters:
+- name: publish
+  type: boolean
+  default: true
+
+variables:
+  solution: 'SignalRTypeScriptHubGenerator.sln'
+  projectFileToPublish: 'SignalRTypeScriptHubGenerator'
+  buildConfiguration: 'Release'
+  NUGET_PACKAGES: $(Pipeline.Workspace)/.nuget/packages
+  
+  #Below should all not be edited. Ideally this will all be extracted to a template, and stored on a centralized repo.
+  #-------------------------------------------------
+  #Auto Incrimenting counter for this build def. Used to version branch package releases
+  customRevision: $[counter('buildRevision', 0)]
+  allowPublishing: 'true'
+  #Use "Release" version pattern if this is in master
+  ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+    versioningScheme: 'byBuildNumber'
+    packArguments: ''
+  #Use a pre-release version pattern to allow feature branches to have builds/publishes published as well
+  ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+    versioningScheme: 'off'
+    versionOverride: $(buildDate).$(customRevision)-${{variables['Build.SourceBranchName']}}
+    packArguments: 'PackageVersion=$(versionOverride)'
+
+steps:
+
+#Get the date to use as part of the package version if in a non-master branch
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      $date=$(Get-Date -Format yyyy.MM.dd);
+      Write-Host "##vso[task.setvariable variable=buildDate]$date";
+
+- script: echo '##vso[task.setvariable variable=allowPublishing]false'
+  condition: startsWith(variables['Build.SourceBranch'], 'refs/pull/')
+  displayName: Disable publish for pull requests
+  
+- task: NuGetToolInstaller@1
+
+- task: Cache@2
+  inputs:
+    key: 'nuget | "$(Agent.OS)" | **/packages.lock.json,!**/bin/**'
+    restoreKeys: |
+       nuget | "$(Agent.OS)"
+    path: $(NUGET_PACKAGES)
+  displayName: Cache NuGet packages
+  
+- task: NuGetCommand@2
+  inputs:
+    command: 'restore'
+    restoreSolution: '$(solution)'
+    feedsToUse: 'select'
+    vstsFeed: '5382f449-0010-42cd-9ab0-807473a7c480/3621a669-9925-466d-8cbd-80bea00c9323'
+
+- task: VSBuild@1
+  inputs:
+    solution: '$(solution)'
+    configuration: '$(buildConfiguration)'
+
+- task: VSTest@2
+  inputs:
+    configuration: '$(buildConfiguration)'
+
+#Publish out source/symbols to make debugging work
+- task: PublishSymbols@2
+  inputs:
+    SearchPattern: '**/bin/**/*.pdb'
+    SymbolServerType: 'TeamServices'
+    TreatNotIndexedAsWarning: true
+
+# Pack, and then publish what we just built and tested (If successful)
+- task: DotNetCoreCLI@2
+  condition: and(succeeded(), ${{ parameters.publish }}, eq(variables['allowPublishing'], 'true'))
+  inputs:
+    command: 'pack'
+    packagesToPack: '**/*.csproj;!**/*.Tests.csproj'
+    includesymbols: true
+    includesource: true
+    versioningScheme: '$(versioningScheme)'
+    configuration: '$(buildConfiguration)'
+    nobuild: true
+    buildProperties: '$(packArguments)'
+
+- task: NuGetCommand@2
+  condition: and(succeeded(), ${{ parameters.publish }}, eq(variables['allowPublishing'], 'true'))
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: '5382f449-0010-42cd-9ab0-807473a7c480/3621a669-9925-466d-8cbd-80bea00c9323'

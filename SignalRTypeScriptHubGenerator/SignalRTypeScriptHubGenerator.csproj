@@ -19,19 +19,4 @@
 		<PackageReference Include="Reinforced.Typings" Version="1.5.9" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Compile Update="Scripts\Scripts.Designer.cs">
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>Scripts.resx</DependentUpon>
-	  </Compile>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <EmbeddedResource Update="Scripts\Scripts.resx">
-	    <Generator>ResXFileCodeGenerator</Generator>
-	    <LastGenOutput>Scripts.Designer.cs</LastGenOutput>
-	  </EmbeddedResource>
-	</ItemGroup>
-
 </Project>

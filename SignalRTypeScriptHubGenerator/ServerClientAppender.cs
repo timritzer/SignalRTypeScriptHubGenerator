@@ -74,8 +74,8 @@ namespace SignalRTypeScriptHubGenerator
 						),
 						LineAfter = " "
 					},
-					new RtRaw(Encoding.Default.GetString(Scripts.Scripts.handleQueue).Replace("{{typeName}}", typeName)),
-					new RtRaw(Encoding.Default.GetString(Scripts.Scripts.invoke).Replace("{{typeName}}", typeName))
+					new RtRaw(GetHandleQueueFn(typeName)),
+					new RtRaw(GetInvokeFn(typeName))
 				},
 			};
 			clientImpl.Members.AddRange(GetImplementationMembers(result));
@@ -83,6 +83,72 @@ namespace SignalRTypeScriptHubGenerator
 			Context.Location.CurrentNamespace.CompilationUnits.Add(clientImpl);
 			Context.AddNewLine();
 
+		}
+
+		private string GetHandleQueueFn(string typeName)
+		{
+			return $@"async handleQueue() {{
+	if (this.queue.length > 0) {{
+		while (this.queue.length > 0) {{
+			const hub = await this.hubConnection;
+			if (hub.state !== HubConnectionState.Connected) {{
+				break;
+			}}
+			console.debug(`process {typeName} queue item`);
+			const fn = this.queue[0];
+			fn(undefined);
+			this.queue.splice(0, 1);
+		}}
+	}}
+	window.setTimeout(() => this.handleQueue(), this.OFFLINE_QUEUE_INTERVAL_SECONDS * 1000);
+}}
+";
+		}
+
+		private string GetInvokeFn(string typeName)
+		{
+			return $@"async invoke<T>(
+	fn: () => Promise<T>,
+	hub: HubConnection,
+	name: string
+): Promise<T> {{
+	if (hub.state === HubConnectionState.Connected) {{
+		return fn();
+	}} else {{
+		if (this.queue.length >= this.MAX_QUEUE_COUNT) {{
+			return Promise.reject(
+				`Failed to add action to {typeName}.${{name}} queue.  Limited to ${{this.MAX_QUEUE_COUNT}} calls.`
+			);
+		}}
+		console.debug(`{typeName}.${{name}} not connected - adding to queue`);
+		let resolver: PromiseResolver<unknown> | undefined;
+		let rejector: PromiseRejector | undefined;
+		const queueFn = new Promise((resolve, reject) => {{
+			resolver = resolve;
+			rejector = reject;
+		}}).then(() => {{
+			return fn();
+		}});
+
+		const timeout = new Promise<T>((_, reject) => {{
+			const id = window.setTimeout(() => {{
+				window.clearTimeout(id);
+				const error = `{typeName}.${{name}} queue item timed out in ${{this.QUEUE_TIMEOUT_SECONDS}} seconds.`;
+				reject(error);
+				if (rejector) {{
+					rejector(error);
+				}}
+			}}, this.QUEUE_TIMEOUT_SECONDS * 1000);
+		}});
+
+		if (resolver) {{
+			this.queue.push(resolver);
+		}}
+
+		return Promise.race([queueFn, timeout]);
+	}}
+}}
+";
 		}
 
 		private IEnumerable<RtNode> GetImplementationMembers(RtInterface result)

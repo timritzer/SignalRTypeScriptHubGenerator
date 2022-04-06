@@ -4,9 +4,9 @@
     ".NETCoreApp,Version=v3.1": {
       "Reinforced.Typings": {
         "type": "Direct",
-        "requested": "[1.5.9, )",
-        "resolved": "1.5.9",
-        "contentHash": "arvX/QfJIxT1cUdllmpJpRx7CSvzuko3XSvld5NfJgVggY3qQjhoQrkXBzBVp8pfLoGgDyHLmikSCVh7+v8HwA==",
+        "requested": "[1.6.1, )",
+        "resolved": "1.6.1",
+        "contentHash": "w0eQOQ/xR+ap+W2ewYDLgE9zPuq6dKUWLGDoaP7x0nZza1/n7qW/venMj3ykjUEQMmMIZOP7egCRnny1/WBszw==",
         "dependencies": {
           "System.Runtime.Loader": "4.3.0",
           "System.Xml.XmlSerializer": "4.3.0"

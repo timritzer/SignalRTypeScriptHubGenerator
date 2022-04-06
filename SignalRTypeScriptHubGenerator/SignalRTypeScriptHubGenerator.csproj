@@ -16,7 +16,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Reinforced.Typings" Version="1.5.9" />
+		<PackageReference Include="Reinforced.Typings" Version="1.6.1" />
 	</ItemGroup>
 
 </Project>
